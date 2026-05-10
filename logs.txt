@@ -1,0 +1,31 @@
+
+======================================================================
+  SESIÓN INICIADA: 2026-05-10 19:19:49
+  Sistema: Software FJ - Gestión de Clientes, Servicios y Reservas
+======================================================================
+[2026-05-10 19:19:49] [INFO ] [MAIN        ] Inicio de simulación de operaciones
+[2026-05-10 19:19:49] [INFO ] [CLIENTE     ] Cliente creado: Ana María Torres (CLI-001)
+[2026-05-10 19:19:49] [OPER ] [CLIENTE     ] Registro de cliente 'CLI-001' → EXITOSO
+[2026-05-10 19:19:49] [INFO ] [CLIENTE     ] Cliente creado: Carlos Enrique Ruiz (CLI-002)
+[2026-05-10 19:19:49] [OPER ] [CLIENTE     ] Registro de cliente 'CLI-002' → EXITOSO
+[2026-05-10 19:19:49] [ERROR] [MAIN        ] OP03 — cliente con email inválido rechazado | Excepción: DatosClienteInvalidosError: [CLI-004] Dato inválido en campo 'email' con valor 'correo-sin-arroba': Formato de correo electrónico inválido.
+[2026-05-10 19:19:49] [INFO ] [CLIENTE     ] Cliente creado: Ana Duplicada (CLI-001)
+[2026-05-10 19:19:49] [ERROR] [MAIN        ] OP04 — intento de duplicar cliente | Excepción: ClienteYaExisteError: [CLI-002] El cliente con ID 'CLI-001' ya está registrado.
+[2026-05-10 19:19:49] [OPER ] [SERVICIO    ] Registro de servicio 'SRV-S01' → EXITOSO
+[2026-05-10 19:19:49] [OPER ] [SERVICIO    ] Registro de servicio 'SRV-E01' → EXITOSO
+[2026-05-10 19:19:49] [OPER ] [SERVICIO    ] Registro de servicio 'SRV-A01' → EXITOSO
+[2026-05-10 19:19:49] [ERROR] [MAIN        ] OP06 — servicio con precio negativo rechazado | Excepción: ParametroServicioInvalidoError: [SRV-004] Parámetro inválido 'precio_hora' = '-5000': Debe ser un valor positivo.
+[2026-05-10 19:19:49] [INFO ] [RESERVA     ] Reserva 505748D4 creada para cliente 'CLI-001' | Servicio: 'Sala Ejecutiva Norte' | 3.0h
+[2026-05-10 19:19:49] [OPER ] [RESERVA     ] Confirmación reserva 505748D4 → EXITOSA | Costo: $303,450
+[2026-05-10 19:19:49] [ERROR] [MAIN        ] OP08 — intento de doble confirmación | Excepción: ReservaYaConfirmadaError: [RES-003] La reserva '505748D4' ya fue confirmada anteriormente.
+[2026-05-10 19:19:49] [ERROR] [MAIN        ] OP09 — duración mínima no cumplida | Excepción: DuracionInvalidaError: [RES-005] Duración '0.2h' inválida. El mínimo permitido es 0.5h.
+[2026-05-10 19:19:49] [INFO ] [RESERVA     ] Reserva E051D7E9 creada para cliente 'CLI-002' | Servicio: 'Asesoría Legal Corporativa' | 2.0h
+[2026-05-10 19:19:49] [OPER ] [RESERVA     ] Confirmación reserva E051D7E9 → EXITOSA | Costo: $514,080
+[2026-05-10 19:19:49] [OPER ] [RESERVA     ] Procesamiento reserva E051D7E9 → EXITOSO
+[2026-05-10 19:19:49] [INFO ] [RESERVA     ] Intento de procesamiento para reserva E051D7E9 (estado final: Procesada)
+[2026-05-10 19:19:49] [ERROR] [MAIN        ] OP11 — intento de cancelar reserva procesada | Excepción: ReservaError: [RES-008] No se puede cancelar la reserva 'E051D7E9': ya fue procesada.
+[2026-05-10 19:19:49] [ERROR] [MAIN        ] OP12 — encadenamiento de excepción | Excepción: RuntimeError: No hay servicios de reemplazo disponibles | Causa: [SRV-002] El servicio 'Laptop HP ProBook' no está disponible en este momento.
+[2026-05-10 19:19:49] [INFO ] [MAIN        ] OP12 — servicio restaurado a disponible
+[2026-05-10 19:19:49] [INFO ] [RESERVA     ] Reserva EEFA9537 creada para cliente 'CLI-001' | Servicio: 'Sala Ejecutiva Norte' | 1.5h
+[2026-05-10 19:19:49] [OPER ] [RESERVA     ] Cancelación reserva EEFA9537 → EXITOSA | Motivo: Cambio de fecha solicitado por cliente
+[2026-05-10 19:19:49] [INFO ] [MAIN        ] Simulación completada exitosamente
