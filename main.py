@@ -1,314 +1,487 @@
 """
 main.py - Punto de entrada del Sistema Software FJ
 Autor: Equipo Software FJ
-Descripción: Simula al menos 10 operaciones completas que demuestran
-             el uso de POO, excepciones personalizadas, manejo robusto
-             de errores y el registro en logs.
+Descripción: Menú interactivo que permite al usuario gestionar clientes,
+             servicios y reservas, con manejo robusto de excepciones.
 """
 
 import sys
 import os
 
-# Asegurar que los módulos del proyecto se encuentren
 sys.path.insert(0, os.path.dirname(__file__))
 
 from cliente import Cliente
 from excepciones import (
-    ClienteError,
-    ClienteYaExisteError,
-    DatosClienteInvalidosError,
-    DuracionInvalidaError,
-    ParametroServicioInvalidoError,
-    ReservaCanceladaError,
-    ReservaYaConfirmadaError,
-    ServicioNoDisponibleError,
-    SoftwareFJError,
+    ClienteError, ClienteYaExisteError, DatosClienteInvalidosError,
+    DuracionInvalidaError, ParametroServicioInvalidoError,
+    ReservaCanceladaError, ReservaYaConfirmadaError,
+    ServicioNoDisponibleError, SoftwareFJError,
 )
 from logger import Logger
 from reserva import EstadoReserva, Reserva
 from servicio import AlquilerEquipo, AsesoriaEspecializada, ReservaSala, Servicio
 
-# ──────────────────────────────────────────────────────────────────────────────
-SEPARADOR = "─" * 65
 log = Logger()
+SEP = "─" * 55
 
 
-def titulo(texto: str) -> None:
-    print(f"\n{'═'*65}")
-    print(f"  {texto}")
-    print(f"{'═'*65}")
+def limpiar():
+    os.system("cls" if os.name == "nt" else "clear")
 
 
-def subtitulo(numero: int, texto: str) -> None:
-    print(f"\n{SEPARADOR}")
-    print(f"  OP {numero:02d}: {texto}")
-    print(SEPARADOR)
+def pausar():
+    input("\n  Presiona Enter para continuar...")
 
 
-def ok(msg: str) -> None:
-    print(f"  ✔  {msg}")
+def titulo(texto):
+    print(f"\n{'═'*55}")
+    print(f"   {texto}")
+    print(f"{'═'*55}")
 
 
-def err(msg: str) -> None:
-    print(f"  ✘  {msg}")
+def ok(msg): print(f"\n  ✔  {msg}")
+def err(msg): print(f"\n  ✘  {msg}")
+def info(msg): print(f"  ℹ  {msg}")
 
 
-def info(msg: str) -> None:
-    print(f"  ℹ  {msg}")
+# ══════════════════════════════════════════════════════
+# MÓDULO: CLIENTES
+# ══════════════════════════════════════════════════════
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# BLOQUE PRINCIPAL
-# ══════════════════════════════════════════════════════════════════════════════
-def main() -> None:
-    titulo("SISTEMA INTEGRAL SOFTWARE FJ — SIMULACIÓN DE OPERACIONES")
-    log.info("Inicio de simulación de operaciones", "MAIN")
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 01 — Registrar cliente válido
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(1, "Registrar cliente válido")
-    try:
-        c1 = Cliente("CLI-001", "Ana María Torres", "ana.torres@empresa.co",
-                     "+57 310 456 7890", "Empresa ABC S.A.S")
-        Cliente.registrar(c1)
-        ok(c1.describir())
-    except ClienteError as e:
-        err(f"Error de cliente: {e}")
-        log.error("OP01 fallida", "MAIN", e)
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 02 — Registrar segundo cliente válido
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(2, "Registrar segundo cliente válido")
-    try:
-        c2 = Cliente("CLI-002", "Carlos Enrique Ruiz", "c.ruiz@tech.io",
-                     "3001234567")
-        Cliente.registrar(c2)
-        ok(c2.describir())
-    except ClienteError as e:
-        err(f"Error de cliente: {e}")
-        log.error("OP02 fallida", "MAIN", e)
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 03 — Intentar registrar cliente con datos inválidos (email incorrecto)
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(3, "Registrar cliente con email inválido (debe fallar)")
-    try:
-        c_invalido = Cliente("CLI-003", "Pedro Inválido", "correo-sin-arroba",
-                             "3109876543")
-        Cliente.registrar(c_invalido)
-        ok(c_invalido.describir())
-    except DatosClienteInvalidosError as e:
-        err(f"[ESPERADO] Datos inválidos: {e}")
-        log.error("OP03 — cliente con email inválido rechazado", "MAIN", e)
-    except ClienteError as e:
-        err(f"Error de cliente: {e}")
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 04 — Intentar registrar cliente duplicado
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(4, "Registrar cliente duplicado (debe fallar)")
-    try:
-        c_dup = Cliente("CLI-001", "Ana Duplicada", "ana2@otro.co", "3001111111")
-        Cliente.registrar(c_dup)
-    except ClienteYaExisteError as e:
-        err(f"[ESPERADO] Cliente duplicado: {e}")
-        log.error("OP04 — intento de duplicar cliente", "MAIN", e)
-    except ClienteError as e:
-        err(f"Error de cliente: {e}")
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 05 — Crear y registrar servicios válidos
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(5, "Crear y registrar tres servicios especializados")
-    s1 = s2 = s3 = None
-    try:
-        s1 = ReservaSala("SRV-S01", "Sala Ejecutiva Norte", 80_000, capacidad_max=10)
-        Servicio.registrar(s1)
-        ok(s1.describir())
-
-        s2 = AlquilerEquipo("SRV-E01", "Laptop HP ProBook", 25_000,
-                            tipo_equipo="Laptop", deposito=200_000)
-        Servicio.registrar(s2)
-        ok(s2.describir())
-
-        s3 = AsesoriaEspecializada("SRV-A01", "Asesoría Legal Corporativa",
-                                    120_000, area="Derecho Empresarial",
-                                    nivel_asesor="experto")
-        Servicio.registrar(s3)
-        ok(s3.describir())
-
-    except (ParametroServicioInvalidoError, SoftwareFJError) as e:
-        err(f"Error creando servicio: {e}")
-        log.error("OP05 fallida", "MAIN", e)
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 06 — Crear servicio con parámetro inválido (precio_hora negativo)
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(6, "Crear servicio con precio negativo (debe fallar)")
-    try:
-        s_malo = ReservaSala("SRV-BAD", "Sala Fantasma", -5000, capacidad_max=5)
-        Servicio.registrar(s_malo)
-    except ParametroServicioInvalidoError as e:
-        err(f"[ESPERADO] Parámetro inválido: {e}")
-        log.error("OP06 — servicio con precio negativo rechazado", "MAIN", e)
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 07 — Crear reserva válida y confirmarla (try/except/else)
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(7, "Crear y confirmar reserva exitosa (3h, con IVA)")
-    r1 = None
-    if c1 and s1:
-        try:
-            r1 = Reserva(c1, s1, duracion_horas=3.0, aplicar_iva=True,
-                         notas="Reunión de directivos Q3")
-            Reserva.agregar(r1)
-        except DuracionInvalidaError as e:
-            err(f"Duración inválida: {e}")
-            log.error("OP07a — duración inválida", "MAIN", e)
-        except ServicioNoDisponibleError as e:
-            err(f"Servicio no disponible: {e}")
+def menu_clientes():
+    while True:
+        titulo("GESTIÓN DE CLIENTES")
+        print("  1. Registrar nuevo cliente")
+        print("  2. Buscar cliente por ID")
+        print("  3. Listar todos los clientes")
+        print("  0. Volver al menú principal")
+        opcion = input("\n  Elige una opción: ").strip()
+        if opcion == "1":
+            registrar_cliente()
+        elif opcion == "2":
+            buscar_cliente()
+        elif opcion == "3":
+            listar_clientes()
+        elif opcion == "0":
+            break
         else:
-            # Confirmar la reserva
-            try:
-                costo = r1.confirmar()
-                ok(f"Reserva confirmada. Costo total: ${costo:,.0f} COP")
-                info(r1.describir())
-            except Exception as e:
-                err(f"Error al confirmar: {e}")
-                log.error("OP07b — error confirmando reserva", "MAIN", e)
+            err("Opción inválida.")
+        pausar()
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 08 — Intentar confirmar la misma reserva dos veces
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(8, "Confirmar reserva ya confirmada (debe fallar)")
-    if r1:
+
+def registrar_cliente():
+    titulo("REGISTRAR CLIENTE")
+    try:
+        cid      = input("  ID del cliente (ej: CLI-003): ").strip()
+        nombre   = input("  Nombre completo            : ").strip()
+        email    = input("  Correo electrónico         : ").strip()
+        telefono = input("  Teléfono                   : ").strip()
+        empresa  = input("  Empresa (opcional)         : ").strip()
+        c = Cliente(cid, nombre, email, telefono, empresa if empresa else None)
+        Cliente.registrar(c)
+        ok(f"Cliente '{nombre}' registrado exitosamente.")
+        info(c.describir())
+        log.operacion(f"Registro cliente {cid}", "EXITOSO", "MAIN")
+    except ClienteYaExisteError as e:
+        err(f"[ESPERADO] {e}")
+        log.error("Cliente duplicado", "MAIN", e)
+    except DatosClienteInvalidosError as e:
+        err(f"[ESPERADO] Dato inválido: {e}")
+        log.error("Datos inválidos", "MAIN", e)
+    except ClienteError as e:
+        err(f"Error de cliente: {e}")
+        log.error("Error cliente", "MAIN", e)
+
+
+def buscar_cliente():
+    titulo("BUSCAR CLIENTE")
+    cid = input("  ID del cliente a buscar: ").strip()
+    try:
+        c = Cliente.buscar(cid)
+        ok("Cliente encontrado:")
+        info(c.describir())
+    except SoftwareFJError as e:
+        err(str(e))
+        log.error("Búsqueda fallida", "MAIN", e)
+
+
+def listar_clientes():
+    titulo("LISTA DE CLIENTES")
+    clientes = Cliente.listar()
+    if not clientes:
+        info("No hay clientes registrados.")
+        return
+    for c in clientes:
+        print(f"  • {c.describir()}")
+
+
+# ══════════════════════════════════════════════════════
+# MÓDULO: SERVICIOS
+# ══════════════════════════════════════════════════════
+
+def menu_servicios():
+    while True:
+        titulo("GESTIÓN DE SERVICIOS")
+        print("  1. Crear Reserva de Sala")
+        print("  2. Crear Alquiler de Equipo")
+        print("  3. Crear Asesoría Especializada")
+        print("  4. Listar todos los servicios")
+        print("  5. Habilitar / Deshabilitar servicio")
+        print("  0. Volver al menú principal")
+        opcion = input("\n  Elige una opción: ").strip()
+        if opcion == "1":
+            crear_sala()
+        elif opcion == "2":
+            crear_equipo()
+        elif opcion == "3":
+            crear_asesoria()
+        elif opcion == "4":
+            listar_servicios()
+        elif opcion == "5":
+            toggle_servicio()
+        elif opcion == "0":
+            break
+        else:
+            err("Opción inválida.")
+        pausar()
+
+
+def crear_sala():
+    titulo("CREAR RESERVA DE SALA")
+    try:
+        sid    = input("  ID del servicio (ej: SRV-S01): ").strip()
+        nombre = input("  Nombre de la sala             : ").strip()
+        precio = float(input("  Precio por hora (COP)         : ").strip())
+        cap    = int(input("  Capacidad máxima (personas)   : ").strip())
+        s = ReservaSala(sid, nombre, precio, cap)
+        Servicio.registrar(s)
+        ok(f"Sala '{nombre}' registrada.")
+        info(s.describir())
+    except (ValueError, ParametroServicioInvalidoError, SoftwareFJError) as e:
+        err(f"Error: {e}")
+        log.error("Error creando sala", "MAIN", e)
+
+
+def crear_equipo():
+    titulo("CREAR ALQUILER DE EQUIPO")
+    try:
+        sid     = input("  ID del servicio (ej: SRV-E01): ").strip()
+        nombre  = input("  Nombre del equipo             : ").strip()
+        precio  = float(input("  Precio por hora (COP)         : ").strip())
+        tipo    = input("  Tipo de equipo                : ").strip()
+        dep_txt = input("  Depósito requerido (COP, 0=no): ").strip()
+        deposito = float(dep_txt) if dep_txt else 0.0
+        s = AlquilerEquipo(sid, nombre, precio, tipo, deposito > 0, deposito)
+        Servicio.registrar(s)
+        ok(f"Equipo '{nombre}' registrado.")
+        info(s.describir())
+    except (ValueError, ParametroServicioInvalidoError, SoftwareFJError) as e:
+        err(f"Error: {e}")
+        log.error("Error creando equipo", "MAIN", e)
+
+
+def crear_asesoria():
+    titulo("CREAR ASESORÍA ESPECIALIZADA")
+    try:
+        sid    = input("  ID del servicio (ej: SRV-A01) : ").strip()
+        nombre = input("  Nombre de la asesoría          : ").strip()
+        precio = float(input("  Precio base por hora (COP)    : ").strip())
+        area   = input("  Área de especialización        : ").strip()
+        print("  Niveles disponibles: junior | senior | experto")
+        nivel  = input("  Nivel del asesor               : ").strip()
+        s = AsesoriaEspecializada(sid, nombre, precio, area, nivel)
+        Servicio.registrar(s)
+        ok(f"Asesoría '{nombre}' registrada.")
+        info(s.describir())
+    except (ValueError, ParametroServicioInvalidoError, SoftwareFJError) as e:
+        err(f"Error: {e}")
+        log.error("Error creando asesoría", "MAIN", e)
+
+
+def listar_servicios():
+    titulo("LISTA DE SERVICIOS")
+    servicios = Servicio.listar()
+    if not servicios:
+        info("No hay servicios registrados.")
+        return
+    for s in servicios:
+        print(f"  • {s.describir()}")
+
+
+def toggle_servicio():
+    titulo("HABILITAR / DESHABILITAR SERVICIO")
+    listar_servicios()
+    sid = input("\n  ID del servicio: ").strip()
+    try:
+        s = Servicio.buscar(sid)
+        s.disponible = not s.disponible
+        estado = "habilitado" if s.disponible else "deshabilitado"
+        ok(f"Servicio '{s.nombre}' {estado}.")
+        log.operacion(f"Toggle {sid}", estado.upper(), "MAIN")
+    except SoftwareFJError as e:
+        err(str(e))
+        log.error("Error toggle servicio", "MAIN", e)
+
+
+# ══════════════════════════════════════════════════════
+# MÓDULO: RESERVAS
+# ══════════════════════════════════════════════════════
+
+def menu_reservas():
+    while True:
+        titulo("GESTIÓN DE RESERVAS")
+        print("  1. Crear nueva reserva")
+        print("  2. Confirmar reserva")
+        print("  3. Procesar reserva")
+        print("  4. Cancelar reserva")
+        print("  5. Listar todas las reservas")
+        print("  6. Ver detalle de una reserva")
+        print("  0. Volver al menú principal")
+        opcion = input("\n  Elige una opción: ").strip()
+        if opcion == "1":
+            crear_reserva()
+        elif opcion == "2":
+            confirmar_reserva()
+        elif opcion == "3":
+            procesar_reserva()
+        elif opcion == "4":
+            cancelar_reserva()
+        elif opcion == "5":
+            listar_reservas()
+        elif opcion == "6":
+            detalle_reserva()
+        elif opcion == "0":
+            break
+        else:
+            err("Opción inválida.")
+        pausar()
+
+
+def crear_reserva():
+    titulo("CREAR RESERVA")
+    listar_clientes()
+    cid = input("\n  ID del cliente  : ").strip()
+    listar_servicios()
+    sid = input("\n  ID del servicio : ").strip()
+    try:
+        cliente  = Cliente.buscar(cid)
+        servicio = Servicio.buscar(sid)
+        horas    = float(input("  Duración (horas): ").strip())
+        notas    = input("  Notas (opcional): ").strip()
+        desc     = input("  ¿Aplicar descuento corporativo 10%? (s/n): ").strip().lower() == "s"
+        iva      = input("  ¿Aplicar IVA 19%? (s/n): ").strip().lower() == "s"
+        r = Reserva(cliente, servicio, horas,
+                    notas if notas else None,
+                    aplicar_descuento=desc, aplicar_iva=iva)
+        Reserva.agregar(r)
+        ok(f"Reserva creada con ID: {r.reserva_id}")
+        info(r.describir())
+    except DuracionInvalidaError as e:
+        err(f"[ESPERADO] {e}")
+        log.error("Duración inválida", "MAIN", e)
+    except ServicioNoDisponibleError as e:
+        err(f"[ESPERADO] {e}")
+        log.error("Servicio no disponible", "MAIN", e)
+    except (ValueError, SoftwareFJError) as e:
+        err(f"Error: {e}")
+        log.error("Error creando reserva", "MAIN", e)
+
+
+def confirmar_reserva():
+    titulo("CONFIRMAR RESERVA")
+    listar_reservas()
+    rid = input("\n  ID de la reserva: ").strip().upper()
+    try:
+        r = Reserva.buscar(rid)
+        costo = r.confirmar()
+        ok(f"Reserva confirmada. Costo total: ${costo:,.0f} COP")
+        info(r.describir())
+    except ReservaYaConfirmadaError as e:
+        err(f"[ESPERADO] {e}")
+        log.error("Doble confirmación", "MAIN", e)
+    except ReservaCanceladaError as e:
+        err(f"[ESPERADO] {e}")
+        log.error("Confirmar cancelada", "MAIN", e)
+    except SoftwareFJError as e:
+        err(str(e))
+        log.error("Error confirmando", "MAIN", e)
+
+
+def procesar_reserva():
+    titulo("PROCESAR RESERVA")
+    listar_reservas()
+    rid = input("\n  ID de la reserva: ").strip().upper()
+    try:
+        r = Reserva.buscar(rid)
+        r.procesar()
+        ok(f"Reserva procesada. Estado: {r.estado.value}")
+    except SoftwareFJError as e:
+        err(str(e))
+        log.error("Error procesando", "MAIN", e)
+
+
+def cancelar_reserva():
+    titulo("CANCELAR RESERVA")
+    listar_reservas()
+    rid    = input("\n  ID de la reserva: ").strip().upper()
+    motivo = input("  Motivo de cancelación: ").strip()
+    try:
+        r = Reserva.buscar(rid)
+        r.cancelar(motivo if motivo else "Sin especificar")
+        ok("Reserva cancelada exitosamente.")
+        info(r.describir())
+    except SoftwareFJError as e:
+        err(str(e))
+        log.error("Error cancelando", "MAIN", e)
+
+
+def listar_reservas():
+    titulo("LISTA DE RESERVAS")
+    reservas = Reserva.listar()
+    if not reservas:
+        info("No hay reservas registradas.")
+        return
+    print(f"  {'ID':<10} {'Cliente':<22} {'Servicio':<22} {'Estado':<12} {'Costo'}")
+    print(f"  {SEP}")
+    for r in reservas:
+        costo = f"${r.costo:>10,.0f}" if r.costo else "  Pendiente"
+        print(f"  {r.reserva_id:<10} {r.cliente.nombre:<22} "
+              f"{r.servicio.nombre:<22} {r.estado.value:<12} {costo}")
+
+
+def detalle_reserva():
+    titulo("DETALLE DE RESERVA")
+    rid = input("  ID de la reserva: ").strip().upper()
+    try:
+        r = Reserva.buscar(rid)
+        print()
+        print(r.describir())
+    except SoftwareFJError as e:
+        err(str(e))
+
+
+# ══════════════════════════════════════════════════════
+# MÓDULO: DEMO AUTOMÁTICA
+# ══════════════════════════════════════════════════════
+
+def ejecutar_demo():
+    titulo("SIMULACIÓN DEMO — 10 OPERACIONES")
+    print("  Ejecutando operaciones de prueba...\n")
+
+    def op(codigo, desc, accion):
+        print(f"\n  {SEP}")
+        print(f"  {codigo}: {desc}")
         try:
-            r1.confirmar()
-        except ReservaYaConfirmadaError as e:
-            err(f"[ESPERADO] Doble confirmación: {e}")
-            log.error("OP08 — intento de doble confirmación", "MAIN", e)
+            accion()
+            ok("Operación exitosa")
+        except (DatosClienteInvalidosError, ParametroServicioInvalidoError,
+                DuracionInvalidaError, SoftwareFJError) as e:
+            err(f"[CONTROLADO] {type(e).__name__}: {e}")
+            log.error(f"{codigo}", "DEMO", e)
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 09 — Crear reserva con duración inferior al mínimo (debe fallar)
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(9, "Crear reserva con duración 0.2h (mínimo 0.5h) — debe fallar")
-    if c2 and s2:
-        try:
-            r_corta = Reserva(c2, s2, duracion_horas=0.2)
-            Reserva.agregar(r_corta)
-            r_corta.confirmar()
-        except DuracionInvalidaError as e:
-            err(f"[ESPERADO] Duración insuficiente: {e}")
-            log.error("OP09 — duración mínima no cumplida", "MAIN", e)
+    op("OP01", "Registrar cliente válido",
+       lambda: Cliente.registrar(
+           Cliente("DEMO-01", "Ana Torres Demo", "ana.demo@empresa.co", "3101234567")))
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 10 — Reserva con descuento corporativo y procesamiento (try/finally)
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(10, "Reserva con descuento corporativo + procesamiento completo")
-    r2 = None
-    if c2 and s3:
-        try:
-            r2 = Reserva(c2, s3, duracion_horas=2.0,
-                         aplicar_descuento=True, aplicar_iva=True,
-                         notas="Asesoría contrato internacional")
-            Reserva.agregar(r2)
-            costo = r2.confirmar()
-            ok(f"Confirmada con descuento. Costo: ${costo:,.0f} COP")
-            r2.procesar()
-            ok(f"Reserva procesada. Estado: {r2.estado.value}")
-            info(r2.describir())
-        except SoftwareFJError as e:
-            err(f"Error del sistema: {e}")
-            log.error("OP10 fallida", "MAIN", e)
+    op("OP02", "Registrar segundo cliente válido",
+       lambda: Cliente.registrar(
+           Cliente("DEMO-02", "Luis Pérez Demo", "luis.demo@tech.io", "3209876543")))
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 11 — Intentar cancelar una reserva ya procesada (debe fallar)
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(11, "Cancelar reserva procesada (debe fallar)")
-    if r2 and r2.estado == EstadoReserva.PROCESADA:
-        try:
-            r2.cancelar("Prueba de cancelación inválida")
-        except SoftwareFJError as e:
-            err(f"[ESPERADO] No se puede cancelar: {e}")
-            log.error("OP11 — intento de cancelar reserva procesada", "MAIN", e)
+    op("OP03", "Registrar cliente con email inválido (debe fallar)",
+       lambda: Cliente.registrar(
+           Cliente("DEMO-03", "Error Demo", "correo-invalido", "3001111111")))
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 12 — Servicio deshabilitado → intento de reserva (encadenamiento)
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(12, "Reservar servicio deshabilitado (encadenamiento de excepción)")
-    if s2 and c1:
-        s2.disponible = False
-        try:
-            r_deshabilitada = Reserva(c1, s2, duracion_horas=1.0)
-        except ServicioNoDisponibleError as e:
-            try:
-                # Simular encadenamiento: intentar buscar alternativa
-                raise RuntimeError("No hay servicios de reemplazo disponibles") from e
-            except RuntimeError as e_cadena:
-                err(f"[ESPERADO] Encadenamiento: {e_cadena} | Causa: {e_cadena.__cause__}")
-                log.error("OP12 — encadenamiento de excepción", "MAIN", e_cadena)
-        finally:
-            s2.disponible = True  # Restaurar para no afectar otras pruebas
-            log.info("OP12 — servicio restaurado a disponible", "MAIN")
+    op("OP04", "Crear servicio ReservaSala",
+       lambda: Servicio.registrar(
+           ReservaSala("DEMO-S1", "Sala Demo Norte", 80000, 10)))
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 13 — Cálculo de costos polimórfico comparativo
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(13, "Comparar métodos de cálculo polimórfico (4h)")
-    servicios_demo = [sv for sv in [s1, s2, s3] if sv]
-    for sv in servicios_demo:
-        try:
-            base = sv.calcular_costo(4)
-            con_iva = sv.calcular_costo_con_impuesto(4)
-            con_dto = sv.calcular_costo_con_descuento(4, aplicar_iva=True)
-            print(f"\n  {sv.nombre}")
-            print(f"    Base              : ${base:>12,.0f} COP")
-            print(f"    Con IVA (19%)     : ${con_iva:>12,.0f} COP")
-            print(f"    Con Dto+IVA (10%) : ${con_dto:>12,.0f} COP")
-        except SoftwareFJError as e:
-            err(f"Error calculando costo para '{sv.nombre}': {e}")
-            log.error(f"OP13 — error en cálculo {sv.nombre}", "MAIN", e)
+    op("OP05", "Crear servicio AlquilerEquipo",
+       lambda: Servicio.registrar(
+           AlquilerEquipo("DEMO-E1", "Laptop Demo", 25000, "Laptop", True, 150000)))
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # OP 14 — Cancelar una reserva pendiente (operación válida)
-    # ─────────────────────────────────────────────────────────────────────────
-    subtitulo(14, "Crear y cancelar reserva pendiente")
-    if c1 and s1:
-        try:
-            r_cancelable = Reserva(c1, s1, duracion_horas=1.5, notas="Demo cancelación")
-            Reserva.agregar(r_cancelable)
-            r_cancelable.cancelar(motivo="Cambio de fecha solicitado por cliente")
-            ok(f"Reserva cancelada. Estado: {r_cancelable.estado.value}")
-            info(r_cancelable.describir())
-        except SoftwareFJError as e:
-            err(f"Error al cancelar: {e}")
-            log.error("OP14 fallida", "MAIN", e)
+    op("OP06", "Crear servicio AsesoriaEspecializada",
+       lambda: Servicio.registrar(
+           AsesoriaEspecializada("DEMO-A1", "Asesoría Demo", 100000, "Legal", "experto")))
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # RESUMEN FINAL
-    # ─────────────────────────────────────────────────────────────────────────
+    op("OP07", "Crear servicio con precio negativo (debe fallar)",
+       lambda: Servicio.registrar(
+           ReservaSala("DEMO-BAD", "Sala Mala", -1000, 5)))
+
+    def reserva_exitosa():
+        c = Cliente.buscar("DEMO-01")
+        s = Servicio.buscar("DEMO-S1")
+        r = Reserva(c, s, 2.0, aplicar_iva=True)
+        Reserva.agregar(r)
+        costo = r.confirmar()
+        info(f"    Reserva {r.reserva_id} confirmada. Costo: ${costo:,.0f} COP")
+
+    op("OP08", "Crear y confirmar reserva exitosa", reserva_exitosa)
+
+    op("OP09", "Reserva con duración inválida 0.1h (debe fallar)",
+       lambda: Reserva(Cliente.buscar("DEMO-01"),
+                       Servicio.buscar("DEMO-S1"), 0.1))
+
+    def reserva_descuento():
+        c = Cliente.buscar("DEMO-02")
+        s = Servicio.buscar("DEMO-A1")
+        r = Reserva(c, s, 3.0, aplicar_descuento=True, aplicar_iva=True)
+        Reserva.agregar(r)
+        costo = r.confirmar()
+        r.procesar()
+        info(f"    Reserva {r.reserva_id} procesada. Costo: ${costo:,.0f} COP")
+
+    op("OP10", "Reserva con descuento + procesamiento completo", reserva_descuento)
+
+    print(f"\n  {SEP}")
+    ok("Demo completada. Puedes ver los datos en el menú principal.")
+    log.info("Demo completada", "MAIN")
+
+
+# ══════════════════════════════════════════════════════
+# MENÚ PRINCIPAL
+# ══════════════════════════════════════════════════════
+
+def resumen():
     titulo("RESUMEN DEL SISTEMA")
-    print(f"\n  Clientes registrados : {len(Cliente.listar())}")
+    print(f"  Clientes registrados : {len(Cliente.listar())}")
     print(f"  Servicios disponibles: {len(Servicio.listar())}")
     print(f"  Reservas totales     : {len(Reserva.listar())}")
-
-    print("\n  Estado de reservas:")
-    for r in Reserva.listar():
-        print(f"    [{r.reserva_id}] {r.cliente.nombre:<25} "
-              f"| {r.servicio.nombre:<30} "
-              f"| {r.estado.value:<12}"
-              f"| ${r.costo:>10,.0f} COP" if r.costo else
-              f"    [{r.reserva_id}] {r.cliente.nombre:<25} "
-              f"| {r.servicio.nombre:<30} "
-              f"| {r.estado.value}")
-
-    print(f"\n  Logs guardados en: logs.txt")
-    log.info("Simulación completada exitosamente", "MAIN")
-    print(f"\n{'═'*65}\n")
+    pausar()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+def main():
+    log.info("Sistema iniciado", "MAIN")
+    while True:
+        limpiar()
+        titulo("SOFTWARE FJ — SISTEMA DE GESTIÓN")
+        print("  1. Gestión de Clientes")
+        print("  2. Gestión de Servicios")
+        print("  3. Gestión de Reservas")
+        print("  4. Ejecutar Simulación Demo (10 ops)")
+        print("  5. Ver Resumen del Sistema")
+        print("  0. Salir")
+        print(f"\n  {SEP}")
+        opcion = input("  Elige una opción: ").strip()
+
+        if opcion == "1":
+            menu_clientes()
+        elif opcion == "2":
+            menu_servicios()
+        elif opcion == "3":
+            menu_reservas()
+        elif opcion == "4":
+            ejecutar_demo()
+            pausar()
+        elif opcion == "5":
+            resumen()
+        elif opcion == "0":
+            titulo("¡Hasta luego! — Software FJ")
+            log.info("Sistema cerrado", "MAIN")
+            sys.exit(0)
+        else:
+            err("Opción inválida, intenta de nuevo.")
+            pausar()
+
+
 if __name__ == "__main__":
     main()
